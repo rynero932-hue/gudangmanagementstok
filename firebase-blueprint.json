@@ -1,0 +1,200 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Product categories",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "Measurement units (pcs, box, kg, etc.)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "abbreviation": { "type": "string" }
+      },
+      "required": ["name", "abbreviation"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Product suppliers",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "contactName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Master product data",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "barcode": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "sellingPrice": { "type": "number" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "sku", "sellingPrice"]
+    },
+    "Inventory": {
+      "title": "Inventory",
+      "description": "Current stock levels",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "stockQuantity": { "type": "integer" },
+        "minimumStock": { "type": "integer" },
+        "warehouseLocation": { "type": "string" },
+        "lastBuyPrice": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "stockQuantity"]
+    },
+    "InventoryBatch": {
+      "title": "InventoryBatch",
+      "description": "Batch tracking for expiry dates",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "batchNumber": { "type": "string" },
+        "expiryDate": { "type": "string", "format": "date" },
+        "quantityRemaining": { "type": "integer" },
+        "buyPrice": { "type": "number" },
+        "receivedDate": { "type": "string", "format": "date" }
+      },
+      "required": ["productId", "batchNumber", "quantityRemaining", "buyPrice"]
+    },
+    "StockTransaction": {
+      "title": "StockTransaction",
+      "description": "Stock movement logs",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "transactionType": { "type": "string", "enum": ["IN", "OUT", "ADJUST"] },
+        "quantity": { "type": "integer" },
+        "pricePerUnit": { "type": "number" },
+        "referenceId": { "type": "string" },
+        "referenceType": { "type": "string", "enum": ["SALE", "PURCHASE", "ADJUSTMENT"] },
+        "notes": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "stockBefore": { "type": "integer" },
+        "stockAfter": { "type": "integer" }
+      },
+      "required": ["productId", "transactionType", "quantity", "stockBefore", "stockAfter"]
+    },
+    "User": {
+      "title": "User",
+      "description": "System users",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "kasir", "gudang"] },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "username", "role"]
+    },
+    "PurchaseOrder": {
+      "title": "PurchaseOrder",
+      "description": "Incoming stock orders from suppliers",
+      "type": "object",
+      "properties": {
+        "poNumber": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "orderDate": { "type": "string", "format": "date" },
+        "expectedDate": { "type": "string", "format": "date" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "RECEIVED", "CANCELLED"] },
+        "notes": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "receivedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["poNumber", "supplierId", "orderDate", "status"]
+    },
+    "PurchaseOrderItem": {
+      "title": "PurchaseOrderItem",
+      "description": "Items in a purchase order",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "buyPrice": { "type": "number" },
+        "subtotal": { "type": "number" }
+      },
+      "required": ["productId", "quantity", "buyPrice", "subtotal"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Sales header",
+      "type": "object",
+      "properties": {
+        "invoiceNumber": { "type": "string" },
+        "cashierId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["CASH", "QRIS", "DEBIT", "KREDIT"] },
+        "amountPaid": { "type": "number" },
+        "changeAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["COMPLETED", "VOID", "PENDING"] },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["invoiceNumber", "cashierId", "totalAmount", "grandTotal"]
+    },
+    "SaleItem": {
+      "title": "SaleItem",
+      "description": "Sales detail item",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "batchId": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "unitPrice": { "type": "number" },
+        "buyPrice": { "type": "number" },
+        "discount": { "type": "number" },
+        "subtotal": { "type": "number" }
+      },
+      "required": ["productId", "quantity", "unitPrice", "subtotal"]
+    }
+  },
+  "firestore": {
+    "/categories/{id}": { "schema": "Category", "description": "Product categories" },
+    "/units/{id}": { "schema": "Unit", "description": "Measurement units" },
+    "/suppliers/{id}": { "schema": "Supplier", "description": "Suppliers" },
+    "/products/{id}": { "schema": "Product", "description": "Products" },
+    "/inventory/{productId}": { "schema": "Inventory", "description": "Current stock" },
+    "/inventory_batches/{id}": { "schema": "InventoryBatch", "description": "Stock batches" },
+    "/stock_transactions/{id}": { "schema": "StockTransaction", "description": "Stock history" },
+    "/users/{id}": { "schema": "User", "description": "App users" },
+    "/purchase_orders/{id}": { "schema": "PurchaseOrder", "description": "Purchase orders" },
+    "/purchase_orders/{poId}/items/{id}": { "schema": "PurchaseOrderItem", "description": "Items in a PO" },
+    "/sales/{id}": { "schema": "Sale", "description": "Sales records" },
+    "/sales/{saleId}/items/{id}": { "schema": "SaleItem", "description": "Items in a sale" }
+  }
+}

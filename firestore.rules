@@ -1,0 +1,184 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: categories
+    // Fields: name (string), description (string), createdAt (timestamp)
+    //
+    // Collection: units
+    // Fields: name (string), abbreviation (string)
+    //
+    // Collection: suppliers
+    // Fields: name (string), contactName (string), phone (string), email (string), address (string), isActive (bool), createdAt (timestamp)
+    //
+    // Collection: products
+    // Fields: name (string), sku (string), barcode (string), categoryId (string), unitId (string), sellingPrice (number), description (string), imageUrl (string), isActive (bool), createdAt (timestamp)
+    //
+    // Collection: inventory
+    // Fields: productId (string), stockQuantity (int), minimumStock (int), warehouseLocation (string), lastBuyPrice (number), updatedAt (timestamp)
+    //
+    // Collection: inventory_batches
+    // Fields: productId (string), batchNumber (string), expiryDate (timestamp), quantityRemaining (int), buyPrice (number), receivedDate (timestamp)
+    //
+    // Collection: stock_transactions
+    // Fields: productId (string), transactionType (string), quantity (int), pricePerUnit (number), referenceId (string), referenceType (string), notes (string), createdBy (string), createdAt (timestamp), stockBefore (int), stockAfter (int)
+    //
+    // Collection: users
+    // Fields: fullName (string), username (string), email (string), role (string), isActive (bool), createdAt (timestamp)
+    //
+    // Collection: purchase_orders
+    // Fields: poNumber (string), supplierId (string), orderDate (string), expectedDate (string), totalAmount (number), status (string), notes (string), createdBy (string), createdAt (timestamp), receivedAt (timestamp)
+    //
+    // Collection: purchase_orders/{poId}/items
+    // Fields: productId (string), productName (string), quantity (int), buyPrice (number), subtotal (number)
+    //
+    // Collection: sales
+    // Fields: invoiceNumber (string), cashierId (string), customerName (string), totalAmount (number), discountAmount (number), taxAmount (number), grandTotal (number), paymentMethod (string), amountPaid (number), changeAmount (number), status (string), notes (string), createdAt (timestamp)
+    //
+    // Collection: sales/{saleId}/items
+    // Fields: productId (string), batchId (string), quantity (int), unitPrice (number), buyPrice (number), discount (number), subtotal (number)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin') || (request.auth.token.email == "rynero932@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isStaff() {
+      return isAdmin() || hasRole('gudang') || hasRole('kasir');
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Validation Functions
+    // ===============================================================
+    function isValidCategory(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100;
+    }
+
+    function isValidUnit(data) {
+      return data.name is string && data.name.size() > 0 && data.abbreviation is string;
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.sku is string && data.sku.size() > 0 && data.sku.size() <= 50 &&
+             data.sellingPrice is number && data.sellingPrice >= 0;
+    }
+
+    function isValidInventory(data) {
+      return data.productId is string && data.stockQuantity is int && data.stockQuantity >= 0 &&
+             (!('warehouseLocation' in data) || (data.warehouseLocation is string && data.warehouseLocation.size() <= 100));
+    }
+
+    function isValidSale(data) {
+      return data.invoiceNumber is string && data.cashierId == request.auth.uid &&
+             data.totalAmount is number && data.grandTotal is number &&
+             (!('customerName' in data) || (data.customerName is string && data.customerName.size() <= 100)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    function isValidPurchaseOrder(data) {
+      return data.poNumber is string && data.supplierId is string &&
+             data.status in ['PENDING', 'RECEIVED', 'CANCELLED'] &&
+             data.totalAmount is number && data.totalAmount >= 0;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Categories, Units, Suppliers, Products: Read by staff, Write by admin/gudang
+    match /categories/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin() || hasRole('gudang');
+    }
+    match /units/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin() || hasRole('gudang');
+    }
+    match /suppliers/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin() || hasRole('gudang');
+    }
+    match /products/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin() || hasRole('gudang');
+    }
+
+    // Inventory: Read by staff, Update by staff (during transactions)
+    match /inventory/{productId} {
+      allow read: if isStaff();
+      allow write: if isStaff() && isValidInventory(request.resource.data);
+    }
+
+    match /inventory_batches/{id} {
+      allow read: if isStaff();
+      allow write: if isStaff();
+    }
+
+    match /stock_transactions/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff();
+      allow update, delete: if false; // Transactions are immutable
+    }
+
+    // Users: Read by staff, Write by admin
+    match /users/{userId} {
+      allow read: if isStaff();
+      allow create: if isAuthenticated() && (isAdmin() || request.auth.uid == userId);
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+    }
+
+    // Purchase Orders: Read by staff, Create/Update by gudang/admin
+    match /purchase_orders/{poId} {
+      allow read: if isStaff();
+      allow create, update: if (isAdmin() || hasRole('gudang')) && isValidPurchaseOrder(request.resource.data);
+      
+      match /items/{itemId} {
+        allow read: if isStaff();
+        allow create, update: if isAdmin() || hasRole('gudang');
+      }
+    }
+
+    // Sales: Read by staff, Create by kasir/admin
+    match /sales/{saleId} {
+      allow read: if isStaff();
+      allow create: if (hasRole('kasir') || isAdmin()) && isValidSale(request.resource.data);
+      allow update: if isAdmin(); // Only admin can void or edit sales
+      
+      match /items/{itemId} {
+        allow read: if isStaff();
+        allow create: if (hasRole('kasir') || isAdmin());
+      }
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
