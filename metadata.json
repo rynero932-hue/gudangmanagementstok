@@ -1,6 +1,6 @@
 {
-  "name": "GudangPOS - Integrated WMS & POS",
-  "description": "A comprehensive Warehouse Management System and Point of Sale integration with real-time inventory tracking, batch management, and sales reporting.",
-  "requestFramePermissions": [],
-  "majorCapabilities": []
+  "name": "GudangPOS",
+  "description": "Sistem Manajemen Gudang dan Point of Sale terintegrasi. Kelola stok, transaksi penjualan, purchase order, dan laporan secara real-time dengan Firebase.",
+  "version": "2.0.0",
+  "author": "GudangPOS Team"
 }
