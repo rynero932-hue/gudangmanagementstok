@@ -191,9 +191,9 @@ export default function POS() {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row h-full gap-4 lg:gap-5 overflow-hidden relative">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 relative" style={{ minHeight: "calc(100dvh - 7rem)" }}>
       {/* Left: Product area */}
-      <div className="flex-1 flex flex-col gap-3 overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col gap-3 min-w-0">
         {/* Search + category filter */}
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -212,7 +212,7 @@ export default function POS() {
         </div>
 
         {/* Product grid */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(100dvh - 12rem)" }}>
           {filtered.length === 0 ? (
             <div className="h-48 flex flex-col items-center justify-center text-neutral-400">
               <Search size={28} className="mb-2 opacity-20" />
@@ -258,7 +258,7 @@ export default function POS() {
       </div>
 
       {/* Right: Cart - Desktop */}
-      <Card className="hidden lg:flex w-[340px] xl:w-[380px] shrink-0 flex-col border-neutral-200 shadow-xl rounded-3xl overflow-hidden bg-white">
+      <Card className="hidden lg:flex w-[340px] xl:w-[380px] shrink-0 flex-col border-neutral-200 shadow-xl rounded-3xl overflow-hidden bg-white" style={{ maxHeight: "calc(100dvh - 7rem)", position: "sticky", top: 0 }}>
         <CardHeader className="bg-neutral-50 border-b border-neutral-100 py-4 px-5">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-bold flex items-center gap-2">

@@ -286,7 +286,7 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
         </header>
 
         {/* Page content */}
-        <div className={`flex-1 overflow-y-auto p-4 sm:p-6 ${activeTab === 'pos' ? 'overflow-hidden flex flex-col' : ''}`}>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -294,7 +294,7 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15 }}
-              className={activeTab === 'pos' ? 'h-full flex flex-col' : ''}
+              className="w-full"
             >
               {children}
             </motion.div>

@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
 interface DashboardProps {
@@ -27,7 +26,6 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
       snap.docs.forEach(d => { total += d.data().grandTotal || 0; });
       setStats(p => ({ ...p, totalSales: total, totalOrders: snap.size }));
 
-      // Chart: last 7 days
       const days = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(); d.setDate(d.getDate() - (6 - i));
         return { date: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }), amount: 0, ts: new Date(d.setHours(0, 0, 0, 0)).getTime() };
@@ -54,12 +52,10 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
       const low: any[] = [];
       snap.docs.forEach(d => {
         const data = d.data();
-        if (data.stockQuantity <= (data.minimumStock || 10)) {
-          low.push({ id: d.id, ...data });
-        }
+        if (data.stockQuantity <= (data.minimumStock || 10)) low.push({ id: d.id, ...data });
       });
       setStats(p => ({ ...p, lowStockCount: low.length }));
-      setLowStockItems(low.slice(0, 5));
+      setLowStockItems(low.slice(0, 6));
     });
 
     const q = query(collection(db, 'sales'), orderBy('createdAt', 'desc'), limit(6));
@@ -69,7 +65,7 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
   }, []);
 
   const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
-  const fmtShort = (v: number) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}jt` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toString();
+  const fmtShort = (v: number) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}jt` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v);
 
   const statCards = [
     { title: 'Total Penjualan', value: fmt(stats.totalSales), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: 'Semua waktu' },
@@ -78,18 +74,20 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
     { title: 'Total Produk', value: stats.totalProducts.toString(), icon: Package, color: 'text-purple-600', bg: 'bg-purple-50', sub: 'Aktif' },
   ];
 
+  const hasChartData = chartData.some(d => d.amount > 0);
+
   return (
     <div className="space-y-5 pb-10">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {statCards.map(({ title, value, icon: Icon, color, bg, sub, urgent }) => (
-          <Card key={title} className={`border-neutral-200 shadow-sm overflow-hidden ${urgent ? 'ring-1 ring-amber-200' : ''}`}>
+          <Card key={title} className={`border-neutral-200 shadow-sm ${urgent ? 'ring-1 ring-amber-200' : ''}`}>
             <CardContent className="p-4 lg:p-5">
               <div className="flex items-start justify-between mb-3">
-                <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center`}>
+                <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center shrink-0`}>
                   <Icon size={20} />
                 </div>
-                {urgent && <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse mt-1"></span>}
+                {urgent && <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse mt-1 shrink-0"></span>}
               </div>
               <p className="text-xs text-neutral-500 font-medium">{title}</p>
               <p className="text-xl lg:text-2xl font-bold text-neutral-900 mt-0.5 truncate">{value}</p>
@@ -101,51 +99,55 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
 
       {/* Chart + Recent Sales */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Sales Chart */}
+        {/* Sales Chart — fixed pixel height agar ResponsiveContainer bekerja */}
         <Card className="xl:col-span-2 border-neutral-200 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardHeader className="pb-0 pt-5 px-5">
             <CardTitle className="text-base font-semibold">Tren Penjualan (7 Hari)</CardTitle>
           </CardHeader>
-          <CardContent className="h-[200px] sm:h-[260px] px-1 sm:px-4 pb-4">
-            <ResponsiveContainer width="100%" height="100%">
-              {chartData.some(d => d.amount > 0) ? (
-                <BarChart data={chartData} barSize={28}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#aaa' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#aaa' }} tickFormatter={fmtShort} width={48} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '12px' }}
-                    formatter={(v: number) => [fmt(v), 'Penjualan']}
-                    cursor={{ fill: 'rgba(59,130,246,0.05)' }}
-                  />
-                  <Bar dataKey="amount" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-neutral-400 space-y-2">
-                  <TrendingUp size={36} className="opacity-15" />
-                  <p className="text-sm font-medium text-neutral-500">Belum ada data</p>
-                  <p className="text-xs text-neutral-400">Data muncul setelah ada transaksi</p>
-                </div>
-              )}
-            </ResponsiveContainer>
+          <CardContent className="px-3 pb-4 pt-3">
+            {hasChartData ? (
+              <div style={{ width: '100%', height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} barSize={24} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#aaa' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#aaa' }} tickFormatter={fmtShort} width={44} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '12px' }}
+                      formatter={(v: number) => [fmt(v), 'Penjualan']}
+                      cursor={{ fill: 'rgba(59,130,246,0.05)' }}
+                    />
+                    <Bar dataKey="amount" fill="#3b82f6" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-neutral-400 py-16 space-y-2">
+                <TrendingUp size={36} className="opacity-15" />
+                <p className="text-sm font-medium text-neutral-500">Belum ada data grafik</p>
+                <p className="text-xs text-neutral-400 text-center">Data akan muncul setelah ada transaksi penjualan</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Recent Sales */}
         <Card className="border-neutral-200 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardHeader className="pb-2 pt-5 px-5 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-semibold">Transaksi Terbaru</CardTitle>
             {setActiveTab && (
-              <Button variant="ghost" size="sm" className="text-xs text-primary h-7 gap-1 px-2" onClick={() => setActiveTab('sales')}>
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-7 gap-1 px-2 shrink-0"
+                onClick={() => setActiveTab('sales')}>
                 Lihat semua <ArrowRight size={12} />
               </Button>
             )}
           </CardHeader>
-          <CardContent className="px-3 pb-3">
+          <CardContent className="px-3 pb-4">
             {recentSales.length === 0 ? (
               <div className="py-10 flex flex-col items-center justify-center text-neutral-400 space-y-2">
                 <ShoppingCart size={28} className="opacity-15" />
-                <p className="text-sm text-neutral-500">Belum ada transaksi</p>
+                <p className="text-sm text-neutral-500 font-medium">Belum ada transaksi</p>
+                <p className="text-xs text-neutral-400 text-center">Mulai berjualan di menu Kasir</p>
               </div>
             ) : (
               <div className="space-y-1">
@@ -175,13 +177,14 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
       {/* Low Stock Alert */}
       {lowStockItems.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-semibold text-amber-800 flex items-center gap-2">
-              <AlertTriangle size={18} className="text-amber-500" />
+          <CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+              <AlertTriangle size={16} className="text-amber-500 shrink-0" />
               Peringatan Stok ({stats.lowStockCount} produk)
             </CardTitle>
             {setActiveTab && (
-              <Button variant="ghost" size="sm" className="text-xs text-amber-700 h-7 gap-1 px-2 hover:bg-amber-100" onClick={() => setActiveTab('inventory')}>
+              <Button variant="ghost" size="sm" className="text-xs text-amber-700 h-7 gap-1 px-2 hover:bg-amber-100 shrink-0"
+                onClick={() => setActiveTab('inventory')}>
                 Kelola <ArrowRight size={12} />
               </Button>
             )}
@@ -197,8 +200,11 @@ export default function Dashboard({ setActiveTab }: DashboardProps) {
                       <Package size={14} className={isOut ? 'text-red-500' : 'text-amber-500'} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-neutral-900 truncate">{prod?.name || item.id}</p>
-                      <p className="text-xs text-neutral-500">Stok: <span className={`font-bold ${isOut ? 'text-red-600' : 'text-amber-600'}`}>{item.stockQuantity}</span> / Min: {item.minimumStock}</p>
+                      <p className="text-sm font-semibold text-neutral-900 truncate">{prod?.name || 'Produk'}</p>
+                      <p className="text-xs text-neutral-500">
+                        Stok: <span className={`font-bold ${isOut ? 'text-red-600' : 'text-amber-600'}`}>{item.stockQuantity}</span>
+                        {' '}/ Min: {item.minimumStock}
+                      </p>
                     </div>
                     <Badge className={`text-[10px] border-none shrink-0 ${isOut ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                       {isOut ? 'Habis' : 'Menipis'}
